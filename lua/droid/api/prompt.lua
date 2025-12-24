@@ -43,14 +43,28 @@ function M.prompt(prompt, opts)
 end
 
 ---Send the prompt text to the provider.
+---Uses bracketed paste mode for multi-line text to prevent newlines from being interpreted as Enter.
 ---@param provider droid.Provider
 ---@param text string
 ---@param submit boolean
 function M._send_prompt(provider, text, submit)
-  if submit then
-    provider:send(text .. "\n")
+  local has_newlines = text:find("\n") ~= nil
+
+  if has_newlines then
+    -- Use bracketed paste mode for multi-line text
+    local paste_start = "\027[200~"
+    local paste_end = "\027[201~"
+    if submit then
+      provider:send(paste_start .. text .. paste_end .. "\n")
+    else
+      provider:send(paste_start .. text .. paste_end)
+    end
   else
-    provider:send(text)
+    if submit then
+      provider:send(text .. "\n")
+    else
+      provider:send(text)
+    end
   end
 end
 
