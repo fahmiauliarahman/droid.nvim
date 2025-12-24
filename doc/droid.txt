@@ -1,0 +1,258 @@
+*droid.txt*  Integrate Factory AI (Droid) with Neovim
+
+==============================================================================
+CONTENTS                                                      *droid-contents*
+
+    1. Introduction ................................ |droid-introduction|
+    2. Setup ....................................... |droid-setup|
+    3. Configuration ............................... |droid-configuration|
+    4. Usage ....................................... |droid-usage|
+    5. API ......................................... |droid-api|
+    6. Commands .................................... |droid-commands|
+    7. Contexts .................................... |droid-contexts|
+    8. Prompts ..................................... |droid-prompts|
+    9. Statusline .................................. |droid-statusline|
+
+==============================================================================
+1. INTRODUCTION                                           *droid-introduction*
+
+droid.nvim integrates Factory AI (Droid) with Neovim, providing a seamless
+AI-assisted development experience directly in your editor.
+
+Features:
+- Toggle droid terminal with a single keymap
+- Input prompts with context injection
+- Select from predefined prompts
+- Inject editor context (buffer, cursor, selection, diagnostics)
+- Auto-reload buffers when droid modifies files
+- Statusline component
+
+==============================================================================
+2. SETUP                                                        *droid-setup*
+
+Using lazy.nvim: >lua
+    {
+      "fahmiauliarahman/droid.nvim",
+      dependencies = {
+        { "folke/snacks.nvim", opts = { input = {}, terminal = {} } }, -- optional
+      },
+      config = function()
+        vim.g.droid_opts = {
+          -- your configuration
+        }
+
+        vim.o.autoread = true -- for auto-reload
+
+        -- Recommended keymaps
+        vim.keymap.set({ "n", "x" }, "<C-a>", function()
+          require("droid").ask("@this: ", { submit = true })
+        end, { desc = "Ask Droid" })
+        
+        vim.keymap.set({ "n", "x" }, "<C-x>", function()
+          require("droid").select()
+        end, { desc = "Droid actions" })
+        
+        vim.keymap.set({ "n", "t" }, "<C-.>", function()
+          require("droid").toggle()
+        end, { desc = "Toggle Droid" })
+
+        vim.keymap.set({ "n", "x" }, "go", function()
+          return require("droid").operator("@this ")
+        end, { expr = true, desc = "Add range to Droid" })
+      end,
+    }
+<
+
+==============================================================================
+3. CONFIGURATION                                        *droid-configuration*
+
+Configuration is passed via `vim.g.droid_opts` or `require("droid").setup()`.
+
+See |droid.config.lua| for all options and defaults.
+
+Example: >lua
+    vim.g.droid_opts = {
+      provider = {
+        cmd = "droid",
+        enabled = "terminal",
+        terminal = {
+          split = "right",
+          width = 80,
+        },
+      },
+      prompts = {
+        custom = {
+          prompt = "My custom prompt @this",
+          submit = true,
+        },
+      },
+    }
+<
+
+==============================================================================
+4. USAGE                                                        *droid-usage*
+
+Ask                                                              *droid.ask()*
+    Input a prompt for droid with context completion.
+    >lua
+    require("droid").ask("@this: ", { submit = true })
+<
+
+Select                                                        *droid.select()*
+    Select from prompts and provider actions.
+    >lua
+    require("droid").select()
+<
+
+Prompt                                                        *droid.prompt()*
+    Send a prompt directly to droid.
+    >lua
+    require("droid").prompt("Explain @this", { submit = true })
+<
+
+Operator                                                    *droid.operator()*
+    Use as an operator for range selection.
+    >lua
+    vim.keymap.set("n", "go", function()
+      return require("droid").operator("@this ")
+    end, { expr = true })
+<
+
+Toggle                                                        *droid.toggle()*
+    Toggle the droid terminal window.
+    >lua
+    require("droid").toggle()
+<
+
+==============================================================================
+5. API                                                            *droid-api*
+
+droid.ask({default}, {opts})                                     *droid.ask()*
+    Open input prompt with optional default text.
+    
+    Parameters: ~
+        {default}  Optional default text to pre-fill
+        {opts}     Optional table with:
+                   - submit: boolean, auto-submit the prompt
+                   - context: droid.Context, custom context
+
+droid.select({opts})                                          *droid.select()*
+    Open selection UI for prompts and actions.
+
+droid.prompt({prompt}, {opts})                                *droid.prompt()*
+    Send a prompt to droid.
+    
+    Parameters: ~
+        {prompt}  The prompt text
+        {opts}    Optional table with:
+                  - submit: boolean, auto-submit
+                  - context: droid.Context
+
+droid.operator({prefix})                                    *droid.operator()*
+    Returns an operator for use with keymaps.
+    
+    Parameters: ~
+        {prefix}  Text to prepend to the context
+
+droid.toggle()                                                *droid.toggle()*
+    Toggle the droid terminal visibility.
+
+droid.start()                                                  *droid.start()*
+    Start the droid terminal.
+
+droid.stop()                                                    *droid.stop()*
+    Stop the droid terminal.
+
+droid.statusline()                                        *droid.statusline()*
+    Returns statusline text for droid status.
+
+==============================================================================
+6. COMMANDS                                                  *droid-commands*
+
+:Droid                          Toggle droid terminal
+:Droid toggle                   Toggle droid terminal
+:Droid start                    Start droid terminal
+:Droid stop                     Stop droid terminal
+:Droid ask                      Open ask prompt
+:Droid ask {text}               Open ask prompt with text
+:Droid select                   Open selection UI
+:Droid prompt {text}            Send prompt directly
+
+==============================================================================
+7. CONTEXTS                                                  *droid-contexts*
+
+Contexts are placeholders that get replaced with editor information:
+
+@this           Operator range or visual selection, else cursor position
+@buffer         Current buffer path
+@buffers        All open buffer paths
+@visible        Visible text in all windows
+@diagnostics    Current buffer diagnostics
+@quickfix       Quickfix list entries
+@diff           Git diff output
+
+Custom contexts can be added in configuration: >lua
+    vim.g.droid_opts = {
+      contexts = {
+        ["@custom"] = function(context)
+          return "Custom value"
+        end,
+      },
+    }
+<
+
+==============================================================================
+8. PROMPTS                                                    *droid-prompts*
+
+Built-in prompts:
+
+ask_append      Empty prompt for appending context
+ask_this        @this: (asks for more input)
+diagnostics     Explain @diagnostics
+diff            Review git diff
+document        Add comments to @this
+explain         Explain @this
+fix             Fix @diagnostics
+implement       Implement @this
+optimize        Optimize @this
+review          Review @this
+test            Add tests for @this
+
+Custom prompts: >lua
+    vim.g.droid_opts = {
+      prompts = {
+        refactor = {
+          prompt = "Refactor @this for better readability",
+          submit = true,
+        },
+      },
+    }
+<
+
+==============================================================================
+9. STATUSLINE                                              *droid-statusline*
+
+Add droid status to your statusline:
+
+Lualine: >lua
+    require("lualine").setup({
+      sections = {
+        lualine_z = {
+          require("droid").statusline,
+        },
+      },
+    })
+<
+
+Or use the lualine component: >lua
+    require("lualine").setup({
+      sections = {
+        lualine_z = {
+          require("droid.status").lualine(),
+        },
+      },
+    })
+<
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
