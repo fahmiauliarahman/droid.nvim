@@ -143,7 +143,11 @@ function M.select(opts)
       local prompt_config = config.prompts[choice.name]
       prompt_config.context = context
       if prompt_config.ask then
-        require("droid").ask(prompt_config.prompt, prompt_config)
+        local prompt = prompt_config.prompt
+        if (not prompt or prompt == "") and context.range then
+          prompt = "@this: "
+        end
+        require("droid").ask(prompt, prompt_config)
       else
         require("droid").prompt(prompt_config.prompt, prompt_config)
       end
