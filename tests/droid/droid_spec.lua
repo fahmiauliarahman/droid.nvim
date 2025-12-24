@@ -47,7 +47,7 @@ describe("droid.context", function()
       end_line = 10,
     })
     assert.is_string(result)
-    assert.is_true(result:find("test.lua") ~= nil)
+    assert.is_true(result:find("@test.lua") ~= nil)
     assert.is_true(result:find("L1") ~= nil)
   end)
 

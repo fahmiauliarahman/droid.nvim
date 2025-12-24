@@ -190,6 +190,7 @@ Contexts are placeholders that get replaced with editor information:
 @diagnostics    Current buffer diagnostics
 @quickfix       Quickfix list entries
 @diff           Git diff output
+@<filepath>     Include contents of a file by relative path (e.g., @lua/init.lua)
 
 Custom contexts can be added in configuration: >lua
     vim.g.droid_opts = {

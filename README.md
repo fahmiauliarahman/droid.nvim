@@ -39,11 +39,11 @@ Integrate [Factory AI (Droid)](https://factory.ai) with Neovim — streamline ed
     vim.keymap.set({ "n", "x" }, "<C-a>", function()
       require("droid").ask("@this: ", { submit = true })
     end, { desc = "Ask Droid" })
-    
+
     vim.keymap.set({ "n", "x" }, "<C-x>", function()
       require("droid").select()
     end, { desc = "Droid actions" })
-    
+
     vim.keymap.set({ "n", "t" }, "<C-.>", function()
       require("droid").toggle()
     end, { desc = "Toggle Droid" })
@@ -51,7 +51,7 @@ Integrate [Factory AI (Droid)](https://factory.ai) with Neovim — streamline ed
     vim.keymap.set({ "n", "x" }, "go", function()
       return require("droid").operator("@this ")
     end, { expr = true, desc = "Add range to Droid" })
-    
+
     vim.keymap.set("n", "goo", function()
       return require("droid").operator("@this ") .. "_"
     end, { expr = true, desc = "Add line to Droid" })
@@ -69,15 +69,16 @@ droid.nvim provides sensible defaults. See all options in `lua/droid/config.lua`
 
 droid.nvim replaces placeholders in prompts with editor context:
 
-| Placeholder    | Context                                      |
-| -------------- | -------------------------------------------- |
+| Placeholder    | Context                                       |
+| -------------- | --------------------------------------------- |
 | `@this`        | Visual selection or cursor position with code |
-| `@buffer`      | Current buffer path                          |
-| `@buffers`     | All open buffer paths                        |
-| `@visible`     | Visible text in all windows                  |
-| `@diagnostics` | Current buffer diagnostics                   |
-| `@quickfix`    | Quickfix list entries                        |
-| `@diff`        | Git diff output                              |
+| `@buffer`      | Current buffer path                           |
+| `@buffers`     | All open buffer paths                         |
+| `@visible`     | Visible text in all windows                   |
+| `@diagnostics` | Current buffer diagnostics                    |
+| `@quickfix`    | Quickfix list entries                         |
+| `@diff`        | Git diff output                               |
+| `@<filepath>`  | Include file contents by relative path        |
 
 ### Prompts
 
@@ -117,6 +118,7 @@ vim.g.droid_opts = {
 droid.nvim supports multiple terminal providers:
 
 **Neovim Terminal (default)**
+
 ```lua
 vim.g.droid_opts = {
   provider = {
@@ -130,6 +132,7 @@ vim.g.droid_opts = {
 ```
 
 **snacks.terminal**
+
 ```lua
 vim.g.droid_opts = {
   provider = {
@@ -181,16 +184,16 @@ Toggle the droid terminal window visibility.
 
 ## Commands
 
-| Command                | Description                    |
-| ---------------------- | ------------------------------ |
-| `:Droid`               | Toggle droid terminal          |
-| `:Droid toggle`        | Toggle droid terminal          |
-| `:Droid start`         | Start droid terminal           |
-| `:Droid stop`          | Stop droid terminal            |
-| `:Droid ask`           | Open ask prompt                |
-| `:Droid ask <text>`    | Open ask with pre-filled text  |
-| `:Droid select`        | Open selection UI              |
-| `:Droid prompt <text>` | Send prompt directly           |
+| Command                | Description                   |
+| ---------------------- | ----------------------------- |
+| `:Droid`               | Toggle droid terminal         |
+| `:Droid toggle`        | Toggle droid terminal         |
+| `:Droid start`         | Start droid terminal          |
+| `:Droid stop`          | Stop droid terminal           |
+| `:Droid ask`           | Open ask prompt               |
+| `:Droid ask <text>`    | Open ask with pre-filled text |
+| `:Droid select`        | Open selection UI             |
+| `:Droid prompt <text>` | Send prompt directly          |
 
 ## Statusline
 

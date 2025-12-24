@@ -37,23 +37,58 @@ end
 ---@field kind "char"|"line"|"block"
 
 ---@param buf integer
+---@param line integer 1-based line number
+---@return integer 0-based max column for the line
+local function get_line_max_col(buf, line)
+  local lines = vim.api.nvim_buf_get_lines(buf, line - 1, line, false)
+  if #lines == 0 then
+    return 0
+  end
+  return #lines[1]
+end
+
+---@param buf integer
 ---@return droid.context.Range|nil
 local function selection(buf)
   local mode = vim.fn.mode()
-  local kind = (mode == "V" and "line") or (mode == "v" and "char") or (mode == "\22" and "block")
-  if not kind then
-    return nil
-  end
+  local in_visual = mode == "V" or mode == "v" or mode == "\22"
+  local kind
+  local from, to
 
-  if vim.fn.mode():match("[vV\22]") then
+  if in_visual then
+    kind = (mode == "V" and "line") or (mode == "v" and "char") or "block"
+    -- Get positions while still in visual mode using getpos
+    local start_pos = vim.fn.getpos("v") -- Start of visual selection
+    local end_pos = vim.fn.getpos(".") -- Current cursor (end of selection)
+    from = { start_pos[2], math.max(0, start_pos[3] - 1) }
+    to = { end_pos[2], math.max(0, end_pos[3] - 1) }
+    -- Exit visual mode
     vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<esc>", true, false, true), "x", true)
+  else
+    -- Check if we just exited visual mode by looking at the last visual mode
+    local last_visual = vim.fn.visualmode()
+    if last_visual == "" then
+      return nil
+    end
+    kind = (last_visual == "V" and "line") or (last_visual == "v" and "char") or "block"
+    -- Use marks after visual mode has ended
+    local mark_from = vim.api.nvim_buf_get_mark(buf, "<")
+    local mark_to = vim.api.nvim_buf_get_mark(buf, ">")
+    -- Marks are invalid (not set)
+    if mark_from[1] == 0 or mark_to[1] == 0 then
+      return nil
+    end
+    from = { mark_from[1], mark_from[2] }
+    to = { mark_to[1], mark_to[2] }
   end
 
-  local from = vim.api.nvim_buf_get_mark(buf, "<")
-  local to = vim.api.nvim_buf_get_mark(buf, ">")
   if from[1] > to[1] or (from[1] == to[1] and from[2] > to[2]) then
     from, to = to, from
   end
+
+  -- Clamp columns to valid line lengths
+  from[2] = math.min(from[2], get_line_max_col(buf, from[1]))
+  to[2] = math.min(to[2], get_line_max_col(buf, to[1]))
 
   return {
     from = { from[1], from[2] },
@@ -65,9 +100,14 @@ end
 ---@param buf integer
 ---@param range droid.context.Range
 local function highlight(buf, range)
+  local end_col = nil
+  if range.kind ~= "line" then
+    local max_col = get_line_max_col(buf, range.to[1])
+    end_col = math.min(range.to[2] + 1, max_col)
+  end
   vim.api.nvim_buf_set_extmark(buf, ns_id, range.from[1] - 1, range.from[2], {
     end_row = range.to[1] - (range.kind == "line" and 0 or 1),
-    end_col = (range.kind ~= "line") and range.to[2] + 1 or nil,
+    end_col = end_col,
     hl_group = "Visual",
   })
 end
@@ -104,48 +144,65 @@ function Context:render(prompt)
     return #a > #b
   end)
 
-  ---@type table<string, { input: fun(): table, output: fun(): table }>
-  local placeholders = {}
-  for _, context_placeholder in ipairs(context_placeholders) do
-    placeholders[context_placeholder] = {
-      input = function()
-        return { context_placeholder, "DroidContextPlaceholder" }
-      end,
-      output = function()
-        local value = contexts[context_placeholder](self)
-        if value then
-          return { value, "DroidContextValue" }
-        else
-          return { context_placeholder, "DroidContextPlaceholder" }
-        end
-      end,
-    }
-  end
-
   local input, output = {}, {}
   local i = 1
   while i <= #prompt do
-    local next_pos, next_placeholder = #prompt + 1, nil
-    for placeholder in pairs(placeholders) do
-      local pos = prompt:find(placeholder, i, true)
-      if pos and pos < next_pos then
-        next_pos = pos
-        next_placeholder = placeholder
+    local at_pos = prompt:find("@", i, true)
+
+    if not at_pos then
+      local text = prompt:sub(i)
+      if #text > 0 then
+        table.insert(input, { text })
+        table.insert(output, { text })
       end
+      break
     end
 
-    local text = prompt:sub(i, next_pos - 1)
-    if #text > 0 then
+    if at_pos > i then
+      local text = prompt:sub(i, at_pos - 1)
       table.insert(input, { text })
       table.insert(output, { text })
     end
 
-    if next_placeholder then
-      table.insert(input, placeholders[next_placeholder].input())
-      table.insert(output, placeholders[next_placeholder].output())
-      i = next_pos + #next_placeholder
+    -- Check for fixed placeholders
+    local matched_placeholder = nil
+    for _, placeholder in ipairs(context_placeholders) do
+      if prompt:sub(at_pos, at_pos + #placeholder - 1) == placeholder then
+        matched_placeholder = placeholder
+        break
+      end
+    end
+
+    if matched_placeholder then
+      table.insert(input, { matched_placeholder, "DroidContextPlaceholder" })
+      local value = contexts[matched_placeholder](self)
+      if value then
+        table.insert(output, { value, "DroidContextValue" })
+      else
+        table.insert(output, { matched_placeholder, "DroidContextPlaceholder" })
+      end
+      i = at_pos + #matched_placeholder
     else
-      break
+      -- Check for relative file path
+      local remainder = prompt:sub(at_pos)
+      local file_path = remainder:match("^@([%w%-%._/]+)")
+      local processed = false
+
+      if file_path then
+        local value = self:file(file_path)
+        if value then
+          table.insert(input, { "@" .. file_path, "DroidContextPlaceholder" })
+          table.insert(output, { value, "DroidContextValue" })
+          i = at_pos + 1 + #file_path
+          processed = true
+        end
+      end
+
+      if not processed then
+        table.insert(input, { "@" })
+        table.insert(output, { "@" })
+        i = at_pos + 1
+      end
     end
   end
 
@@ -153,6 +210,20 @@ function Context:render(prompt)
     input = input,
     output = output,
   }
+end
+
+---Get content of a file relative to project root.
+---@param path string
+---@return string|nil
+function Context:file(path)
+  local full_path = vim.fn.fnamemodify(path, ":p")
+  if vim.fn.filereadable(full_path) == 1 then
+    local lines = vim.fn.readfile(full_path)
+    local content = table.concat(lines, "\n")
+    local header = Context.format({ path = path })
+    return header .. "\n```\n" .. content .. "\n```"
+  end
+  return nil
 end
 
 ---Convert rendered context to plaintext.
@@ -201,7 +272,7 @@ function Context.format(args)
   local result = ""
   if (args.buf and is_buf_valid(args.buf)) or args.path then
     local rel_path = vim.fn.fnamemodify(args.path or vim.api.nvim_buf_get_name(args.buf), ":.")
-    result = rel_path .. " "
+    result = "@" .. rel_path .. " "
   end
   if args.start_line and args.end_line and args.start_line > args.end_line then
     args.start_line, args.end_line = args.end_line, args.start_line
