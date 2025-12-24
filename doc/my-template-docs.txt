@@ -1,70 +1,272 @@
-*my-template-docs.txt*     For Neovim >= 0.8.0    Last change: 2025 October 08
+*my-template-docs.txt*    For Neovim >= 0.8.0    Last change: 2025 December 24
 
 ==============================================================================
 Table of Contents                         *my-template-docs-table-of-contents*
 
-1. A Neovim Plugin Template        |my-template-docs-a-neovim-plugin-template|
-  - Using it              |my-template-docs-a-neovim-plugin-template-using-it|
-  - Features and structure|my-template-docs-a-neovim-plugin-template-features-and-structure|
+1. droid.nvim                                    |my-template-docs-droid.nvim|
+  - Features                            |my-template-docs-droid.nvim-features|
+  - Setup                                  |my-template-docs-droid.nvim-setup|
+  - Configuration                  |my-template-docs-droid.nvim-configuration|
+  - Usage                                  |my-template-docs-droid.nvim-usage|
+  - Commands                            |my-template-docs-droid.nvim-commands|
+  - Statusline                        |my-template-docs-droid.nvim-statusline|
+  - Acknowledgments              |my-template-docs-droid.nvim-acknowledgments|
+  - License                              |my-template-docs-droid.nvim-license|
 2. Links                                              |my-template-docs-links|
 
 ==============================================================================
-1. A Neovim Plugin Template        *my-template-docs-a-neovim-plugin-template*
+1. droid.nvim                                    *my-template-docs-droid.nvim*
+
+Integrate Factory AI (Droid) <https://factory.ai> with Neovim — streamline
+editor-aware AI assistance for research, reviews, and code generation.
 
 
+FEATURES                                *my-template-docs-droid.nvim-features*
 
-A template repository for Neovim plugins.
+- Toggle droid terminal with a single keymap
+- Input prompts with completions, highlights, and context injection
+- Select from a library of prompts and define your own
+- Inject editor context (buffer, cursor, selection, diagnostics, git diff)
+- Auto-reload buffers when droid modifies files
+- Statusline component for droid status
+- Supports `snacks.nvim` for enhanced UI (optional)
+- Vim-y — supports ranges and dot-repeat via operators
 
 
-USING IT                  *my-template-docs-a-neovim-plugin-template-using-it*
+SETUP                                      *my-template-docs-droid.nvim-setup*
 
-Via `gh`:
 
->
-    $ gh repo create my-plugin -p ellisonleao/nvim-plugin-template
+LAZY.NVIM ~
+
+>lua
+    {
+      "fahmiauliarahman/droid.nvim",
+      dependencies = {
+        -- Optional but recommended for enhanced UI
+        { "folke/snacks.nvim", opts = { input = {}, terminal = {} } },
+      },
+      config = function()
+        ---@type droid.Opts
+        vim.g.droid_opts = {
+          -- Your configuration here
+        }
+    
+        -- Required for auto-reload when droid edits files
+        vim.o.autoread = true
+    
+        -- Recommended keymaps
+        vim.keymap.set({ "n", "x" }, "<C-a>", function()
+          require("droid").ask("@this: ", { submit = true })
+        end, { desc = "Ask Droid" })
+        
+        vim.keymap.set({ "n", "x" }, "<C-x>", function()
+          require("droid").select()
+        end, { desc = "Droid actions" })
+        
+        vim.keymap.set({ "n", "t" }, "<C-.>", function()
+          require("droid").toggle()
+        end, { desc = "Toggle Droid" })
+    
+        vim.keymap.set({ "n", "x" }, "go", function()
+          return require("droid").operator("@this ")
+        end, { expr = true, desc = "Add range to Droid" })
+        
+        vim.keymap.set("n", "goo", function()
+          return require("droid").operator("@this ") .. "_"
+        end, { expr = true, desc = "Add line to Droid" })
+      end,
+    }
 <
 
-Via github web page:
 
-Click on `Use this template`
+  **Tip:** Run `:checkhealth droid` after setup to verify everything is
+  configured correctly.
 
+CONFIGURATION                      *my-template-docs-droid.nvim-configuration*
 
-
-
-FEATURES AND STRUCTURE*my-template-docs-a-neovim-plugin-template-features-and-structure*
-
-- 100% Lua
-- Github actions for:
-    - running tests using plenary.nvim <https://github.com/nvim-lua/plenary.nvim> and busted <https://olivinelabs.com/busted/>
-    - check for formatting errors (Stylua)
-    - vimdocs autogeneration from README.md file
-    - luarocks release (LUAROCKS_API_KEY secret configuration required)
+droid.nvim provides sensible defaults. See all options in
+`lua/droid/config.lua`.
 
 
-PLUGIN STRUCTURE ~
+CONTEXTS ~
 
->
-    .
-    ├── lua
-    │   ├── plugin_name
-    │   │   └── module.lua
-    │   └── plugin_name.lua
-    ├── Makefile
-    ├── plugin
-    │   └── plugin_name.lua
-    ├── README.md
-    ├── tests
-    │   ├── minimal_init.lua
-    │   └── plugin_name
-    │       └── plugin_name_spec.lua
+droid.nvim replaces placeholders in prompts with editor context:
+
+  Placeholder    Context
+  -------------- -----------------------------------------------
+  @this          Visual selection or cursor position with code
+  @buffer        Current buffer path
+  @buffers       All open buffer paths
+  @visible       Visible text in all windows
+  @diagnostics   Current buffer diagnostics
+  @quickfix      Quickfix list entries
+  @diff          Git diff output
+
+PROMPTS ~
+
+Built-in prompts for common tasks:
+
+  -------------------------------------------------------------------------
+  Name          Prompt
+  ------------- -----------------------------------------------------------
+  diagnostics   Explain @diagnostics
+
+  diff          Review the following git diff for correctness and
+                readability: @diff
+
+  document      Add comments documenting @this
+
+  explain       Explain @this and its context
+
+  fix           Fix @diagnostics
+
+  implement     Implement @this
+
+  optimize      Optimize @this for performance and readability
+
+  review        Review @this for correctness and readability
+
+  test          Add tests for @this
+  -------------------------------------------------------------------------
+
+CUSTOM PROMPTS ~
+
+>lua
+    vim.g.droid_opts = {
+      prompts = {
+        refactor = {
+          prompt = "Refactor @this for better readability and maintainability",
+          submit = true,
+        },
+        security = {
+          prompt = "Review @this for security vulnerabilities",
+          submit = true,
+        },
+      },
+    }
 <
+
+
+PROVIDER ~
+
+droid.nvim supports multiple terminal providers:
+
+**Neovim Terminal (default)**
+
+>lua
+    vim.g.droid_opts = {
+      provider = {
+        enabled = "terminal",
+        terminal = {
+          split = "right",  -- "left", "right", "above", "below"
+          width = 80,
+        },
+      },
+    }
+<
+
+**snacks.terminal**
+
+>lua
+    vim.g.droid_opts = {
+      provider = {
+        enabled = "snacks",
+        snacks = {
+          auto_close = false,
+          win = {
+            position = "right",
+          },
+        },
+      },
+    }
+<
+
+
+USAGE                                      *my-template-docs-droid.nvim-usage*
+
+
+ASK — REQUIRE("DROID").ASK() ~
+
+Input a prompt for droid with context completion support.
+
+- Press `<Tab>` to complete context placeholders
+- Highlights contexts in the input
+
+
+SELECT — REQUIRE("DROID").SELECT() ~
+
+Select from all droid.nvim functionality including prompts and provider
+controls.
+
+
+PROMPT — REQUIRE("DROID").PROMPT() ~
+
+Send a prompt directly to droid.
+
+>lua
+    require("droid").prompt("Explain @this", { submit = true })
+<
+
+
+OPERATOR — REQUIRE("DROID").OPERATOR() ~
+
+Use as a Vim operator for range selection, supporting dot-repeat.
+
+>lua
+    vim.keymap.set("n", "go", function()
+      return require("droid").operator("@this ")
+    end, { expr = true })
+<
+
+
+TOGGLE — REQUIRE("DROID").TOGGLE() ~
+
+Toggle the droid terminal window visibility.
+
+
+COMMANDS                                *my-template-docs-droid.nvim-commands*
+
+  Command                Description
+  ---------------------- -------------------------------
+  :Droid                 Toggle droid terminal
+  :Droid toggle          Toggle droid terminal
+  :Droid start           Start droid terminal
+  :Droid stop            Stop droid terminal
+  :Droid ask             Open ask prompt
+  :Droid ask <text>      Open ask with pre-filled text
+  :Droid select          Open selection UI
+  :Droid prompt <text>   Send prompt directly
+
+STATUSLINE                            *my-template-docs-droid.nvim-statusline*
+
+
+LUALINE ~
+
+>lua
+    require("lualine").setup({
+      sections = {
+        lualine_z = {
+          require("droid").statusline,
+        },
+      },
+    })
+<
+
+
+ACKNOWLEDGMENTS                  *my-template-docs-droid.nvim-acknowledgments*
+
+- Inspired by opencode.nvim <https://github.com/NickvanDyke/opencode.nvim>
+- Built for Factory AI <https://factory.ai>
+
+
+LICENSE                                  *my-template-docs-droid.nvim-license*
+
+MIT
 
 ==============================================================================
 2. Links                                              *my-template-docs-links*
 
-1. *GitHub Workflow Status*: https://img.shields.io/github/actions/workflow/status/ellisonleao/nvim-plugin-template/lint-test.yml?branch=main&style=for-the-badge
-2. *Lua*: https://img.shields.io/badge/Made%20with%20Lua-blueviolet.svg?style=for-the-badge&logo=lua
-3. **: https://docs.github.com/assets/cb-36544/images/help/repository/use-this-template-button.png
+1. *Lua*: https://img.shields.io/badge/Made%20with%20Lua-blueviolet.svg?style=for-the-badge&logo=lua
 
 Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
 
