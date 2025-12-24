@@ -284,11 +284,14 @@ function Context:visible_text()
     if is_buf_valid(buf) then
       local start_line = vim.fn.line("w0", win)
       local end_line = vim.fn.line("w$", win)
-      table.insert(visible, Context.format({
-        buf = buf,
-        start_line = start_line,
-        end_line = end_line,
-      }))
+      table.insert(
+        visible,
+        Context.format({
+          buf = buf,
+          start_line = start_line,
+          end_line = end_line,
+        })
+      )
     end
   end
   if #visible == 0 then
@@ -341,11 +344,14 @@ function Context:quickfix()
   for _, entry in ipairs(qflist) do
     local has_buf = entry.bufnr ~= 0 and vim.api.nvim_buf_get_name(entry.bufnr) ~= ""
     if has_buf then
-      table.insert(lines, Context.format({
-        buf = entry.bufnr,
-        start_line = entry.lnum,
-        start_col = entry.col,
-      }))
+      table.insert(
+        lines,
+        Context.format({
+          buf = entry.bufnr,
+          start_line = entry.lnum,
+          start_col = entry.col,
+        })
+      )
     end
   end
   return table.concat(lines, " ")
