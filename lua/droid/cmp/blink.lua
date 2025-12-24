@@ -1,42 +1,50 @@
 ---Blink.cmp source for droid context completions.
-local M = {}
+---
+---To use this source, add to your blink.cmp config:
+---```lua
+---sources = {
+---  providers = {
+---    droid = { module = "droid.cmp.blink", name = "Droid" },
+---  },
+---  per_filetype = {
+---    droid_ask = { "droid", "buffer" },
+---  },
+---}
+---```
+local source = {}
 
-M.context = nil
+function source.new()
+  return setmetatable({}, { __index = source })
+end
 
----Setup blink.cmp source for droid.
----@param sources string[]
-function M.setup(sources)
-  local has_blink, blink = pcall(require, "blink.cmp")
-  if not has_blink then
-    return
+function source:enabled()
+  return vim.bo.filetype == "droid_ask"
+end
+
+function source:get_trigger_characters()
+  return { "@" }
+end
+
+function source:get_completions(_, callback)
+  local items = {}
+
+  for placeholder, _ in pairs(require("droid.config").opts.contexts) do
+    table.insert(items, {
+      label = placeholder,
+      kind = require("blink.cmp.types").CompletionItemKind.Variable,
+      insertText = placeholder,
+      documentation = {
+        kind = "markdown",
+        value = "Context placeholder: " .. placeholder,
+      },
+    })
   end
 
-  blink.register_source("droid", {
-    name = "droid",
-    get_trigger_characters = function()
-      return { "@" }
-    end,
-    get_completions = function(self, ctx, callback)
-      local items = {}
-
-      for placeholder, _ in pairs(require("droid.config").opts.contexts) do
-        table.insert(items, {
-          label = placeholder,
-          kind = vim.lsp.protocol.CompletionItemKind.Variable,
-          documentation = {
-            kind = "markdown",
-            value = "Context placeholder: " .. placeholder,
-          },
-        })
-      end
-
-      callback({
-        is_incomplete_forward = false,
-        is_incomplete_backward = false,
-        items = items,
-      })
-    end,
+  callback({
+    items = items,
+    is_incomplete_forward = false,
+    is_incomplete_backward = false,
   })
 end
 
-return M
+return source

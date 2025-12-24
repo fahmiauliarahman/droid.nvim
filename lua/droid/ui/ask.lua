@@ -37,17 +37,6 @@ function M.ask(default, opts)
       win = {
         b = { completion = true },
         bo = { filetype = "droid_ask" },
-        on_buf = function(win)
-          vim.api.nvim_create_autocmd("InsertEnter", {
-            once = true,
-            buffer = win.buf,
-            callback = function()
-              if package.loaded["blink.cmp"] then
-                require("droid.cmp.blink").setup(config.ask.blink_cmp_sources)
-              end
-            end,
-          })
-        end,
       },
     })
 
