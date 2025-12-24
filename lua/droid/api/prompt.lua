@@ -35,6 +35,8 @@ function M.prompt(prompt, opts)
       opts.context:clear()
     end, 800)
   else
+    -- Ensure window is visible before sending
+    provider:start()
     M._send_prompt(provider, plaintext, opts.submit)
     opts.context:clear()
   end
@@ -45,8 +47,6 @@ end
 ---@param text string
 ---@param submit boolean
 function M._send_prompt(provider, text, submit)
-  local escaped = text:gsub("\\", "\\\\"):gsub("\n", "\\n")
-
   if submit then
     provider:send(text .. "\n")
   else
