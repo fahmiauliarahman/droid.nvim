@@ -92,25 +92,25 @@ Example: >lua
 ==============================================================================
 4. USAGE                                                        *droid-usage*
 
-Ask                                                              *droid.ask()*
+Ask~
     Input a prompt for droid with context completion.
     >lua
     require("droid").ask("@this: ", { submit = true })
 <
 
-Select                                                        *droid.select()*
+Select~
     Select from prompts and provider actions.
     >lua
     require("droid").select()
 <
 
-Prompt                                                        *droid.prompt()*
+Prompt~
     Send a prompt directly to droid.
     >lua
     require("droid").prompt("Explain @this", { submit = true })
 <
 
-Operator                                                    *droid.operator()*
+Operator~
     Use as an operator for range selection.
     >lua
     vim.keymap.set("n", "go", function()
@@ -118,7 +118,7 @@ Operator                                                    *droid.operator()*
     end, { expr = true })
 <
 
-Toggle                                                        *droid.toggle()*
+Toggle~
     Toggle the droid terminal window.
     >lua
     require("droid").toggle()
