@@ -23,12 +23,10 @@ function Terminal.new(opts)
 end
 
 function Terminal.health()
-  local cmd = require("droid.config").opts.provider.cmd or "droid"
-  local executable = vim.split(cmd, " ")[1]
-  if vim.fn.executable(executable) == 1 then
+  if vim.fn.executable("droid") == 1 then
     return true
   end
-  return "Command `" .. executable .. "` not found", { "Install Factory AI CLI (droid)" }
+  return "Command `droid` not found", { "Install Factory AI CLI (droid)" }
 end
 
 ---Get window configuration based on options.

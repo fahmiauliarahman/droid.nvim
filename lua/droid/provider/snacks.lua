@@ -31,10 +31,8 @@ function Snacks.health()
     return "`snacks.terminal` not available", { "Enable terminal in snacks.nvim config" }
   end
 
-  local cmd = require("droid.config").opts.provider.cmd or "droid"
-  local executable = vim.split(cmd, " ")[1]
-  if vim.fn.executable(executable) ~= 1 then
-    return "Command `" .. executable .. "` not found", { "Install Factory AI CLI (droid)" }
+  if vim.fn.executable("droid") ~= 1 then
+    return "Command `droid` not found", { "Install Factory AI CLI (droid)" }
   end
 
   return true
