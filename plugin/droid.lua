@@ -51,6 +51,19 @@ end, {
 vim.api.nvim_set_hl(0, "DroidContextPlaceholder", { link = "Special", default = true })
 vim.api.nvim_set_hl(0, "DroidContextValue", { link = "String", default = true })
 
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "droid_ask",
+  callback = function(ev)
+    vim.keymap.set("i", "<CR>", function()
+      if vim.fn.pumvisible() == 1 then
+        return vim.api.nvim_replace_termcodes("<C-y>", true, true, true)
+      end
+      vim.cmd.stopinsert()
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, false, true), "n", false)
+    end, { buffer = ev.buf })
+  end,
+})
+
 vim.api.nvim_create_autocmd("VimLeavePre", {
   callback = function()
     local provider = require("droid.config").provider
