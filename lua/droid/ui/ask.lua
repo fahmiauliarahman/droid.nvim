@@ -16,6 +16,10 @@ function M.ask(default, opts)
   opts = opts or {}
   opts.context = opts.context or require("droid.context").new()
 
+  if (not default or default == "") and opts.context.range then
+    default = "@this: "
+  end
+
   local config = require("droid.config").opts
 
   ---@type table
@@ -48,6 +52,7 @@ function M.ask(default, opts)
   vim.ui.input(input_opts, function(value)
     if value and value ~= "" then
       opts.context:clear()
+      opts = vim.tbl_deep_extend("force", opts, { submit = true })
       require("droid").prompt(value, opts)
     else
       opts.context:resume()
